@@ -1,30 +1,21 @@
 package de.dasbabypixel;
 
-import de.dasbabypixel.AVLBaum.IterationStrategy;
+import de.dasbabypixel.Tree.AVLBaum;
+import de.dasbabypixel.Tree.IterationStrategy;
+import de.dasbabypixel.Tree.TreeIterator;
 
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.Random;
 
 public class Start {
 
 	public static void main(String[] args) {
-		//		BAUM baum =
-		//				einfuegen(new BAUM(), "c1", "g1", "l1", "a1", "h1", "i1", "k1", "g1", "g2", "z1");
-		//		baum.ausgeben();
-		//		System.out.println(baum.suchen(new NameSuchwort("g1")));
-		//		System.out.println(baum.suchen(new NameSuchwort("z1")));
-		//		System.out.println("remove: " + baum.entfernen(new NameSuchwort("g1")));
-		//		baum.ausgeben();
-		//		System.out.println(baum.anzahlKnoten());
-		//		AVLBaum<String> baum = new AVLBaum<>(String::compareToIgnoreCase);
 		AVLBaum<Integer> baum = new AVLBaum<>(Comparator.comparingInt(o -> o));
-//		baum.add(0);
-//		baum.add(1);
-//		baum.add(2);
-//		baum.add(3);
+		Random r = new Random(2);
+		System.out.println(baum.size());
 		for (int i = 0; i < 15; i++) {
-			int j = new Random().nextInt(10000);
+			int j = r.nextInt(10000);
+			j = i;
 			if (!baum.contains(j)) {
 				baum.add(j);
 			} else {
@@ -32,13 +23,34 @@ public class Start {
 			}
 		}
 
-		Iterator<Integer> it = baum.iterator(IterationStrategy.POST_ORDER);
-		while(it.hasNext()){
-			System.out.println(it.next());
+		TreeIterator<Integer> it = baum.iterator(IterationStrategy.IN_ORDER);
+		StringBuilder sb = new StringBuilder();
+		while (it.hasNext()) {
+			int i = it.next();
+			sb.append(String.format(" %s%s", repeat(' ', 7 * it.depth()), i));
+			sb.append('\n');
+			System.out.printf(" %s%s%n", repeat(' ', 7 * it.depth()), i);
 		}
-
-		System.out.println(baum.toString(IterationStrategy.POST_ORDER));
+		System.out.println(sb.toString().equals(baum.toString(IterationStrategy.IN_ORDER)));
+		System.out.println(baum.size());
+		it = baum.iterator();
+				while (it.hasNext()) {
+					int i = it.next();
+					if (r.nextDouble() < 0.3) {
+						System.out.println("remove " + i);
+						it.remove();
+					}
+				}
+		System.out.println(baum);
 		System.out.println(baum.height());
+		System.out.println(baum.size());
+	}
+
+	private static String repeat(char n, int times) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < times; i++)
+			sb.append(n);
+		return sb.toString();
 	}
 
 	private static BAUM einfuegen(BAUM baum, String... elements) {
