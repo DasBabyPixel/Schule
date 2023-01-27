@@ -1,6 +1,9 @@
 package de.dasbabypixel;
 
+import de.dasbabypixel.AVLBaum.IterationStrategy;
+
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Random;
 
 public class Start {
@@ -20,7 +23,7 @@ public class Start {
 //		baum.add(1);
 //		baum.add(2);
 //		baum.add(3);
-		for (int i = 0; i < 2000; i++) {
+		for (int i = 0; i < 15; i++) {
 			int j = new Random().nextInt(10000);
 			if (!baum.contains(j)) {
 				baum.add(j);
@@ -29,7 +32,12 @@ public class Start {
 			}
 		}
 
+		Iterator<Integer> it = baum.iterator(IterationStrategy.POST_ORDER);
+		while(it.hasNext()){
+			System.out.println(it.next());
+		}
 
+		System.out.println(baum.toString(IterationStrategy.POST_ORDER));
 		System.out.println(baum.height());
 	}
 

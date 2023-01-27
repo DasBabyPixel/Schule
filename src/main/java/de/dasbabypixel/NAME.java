@@ -1,7 +1,7 @@
 package de.dasbabypixel;
 
 public class NAME implements DATENELEMENT {
-	private String name;
+	private final String name;
 
 	public NAME(String name) {
 		this.name = name;
@@ -35,11 +35,13 @@ public class NAME implements DATENELEMENT {
 	 * all {@code z}.
 	 *
 	 * @param o the object to be compared.
+	 *
 	 * @return a negative integer, zero, or a positive integer as this object is less than, equal
 	 * to, or greater than the specified object.
+	 *
 	 * @throws NullPointerException if the specified object is null
-	 * @throws ClassCastException if the specified object's type prevents it from being compared to
-	 * this object.
+	 * @throws ClassCastException   if the specified object's type prevents it from being compared
+	 *                              to this object.
 	 * @apiNote It is strongly recommended, but <i>not</i> strictly required that
 	 * {@code (x.compareTo(y)==0) == (x.equals(y))}.  Generally speaking, any class that implements
 	 * the {@code Comparable} interface and violates this condition should clearly indicate this
@@ -48,10 +50,10 @@ public class NAME implements DATENELEMENT {
 	 */
 	@Override
 	public int compareTo(DATENELEMENT o) {
-		if (!(o instanceof NAME n)) {
+		if (!(o instanceof NAME)) {
 			return Integer.compare(hashCode(), o.hashCode());
 		}
-		return name.compareTo(n.name);
+		return name.compareTo(((NAME) o).name);
 	}
 
 	@Override

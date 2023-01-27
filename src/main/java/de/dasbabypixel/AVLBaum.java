@@ -149,7 +149,6 @@ public class AVLBaum<T> implements Iterable<T> {
 		return height(node.right) - height(node.left);
 	}
 
-
 	private Node findMinimum(Node node) {
 		while (node.left != null)
 			node = node.left;
@@ -158,15 +157,19 @@ public class AVLBaum<T> implements Iterable<T> {
 
 	@Override
 	public String toString() {
-		return toString(ToStringStrategy.IN_ORDER);
+		return toString(IterationStrategy.IN_ORDER);
 	}
 
-	public String toString(ToStringStrategy strategy) {
-		return switch (strategy) {
-			case IN_ORDER -> toStringInOrder(root, new StringBuilder(), 0).toString();
-			case PRE_ORDER -> toStringPreOrder(root, new StringBuilder(), 0).toString();
-			case POST_ORDER -> toStringPostOrder(root, new StringBuilder(), 0).toString();
-		};
+	public String toString(IterationStrategy strategy) {
+		switch (strategy) {
+			case IN_ORDER:
+				return toStringInOrder(root, new StringBuilder(), 0).toString();
+			case PRE_ORDER:
+				return toStringPreOrder(root, new StringBuilder(), 0).toString();
+			case POST_ORDER:
+				return toStringPostOrder(root, new StringBuilder(), 0).toString();
+		}
+		throw new IllegalArgumentException();
 	}
 
 	private StringBuilder toStringInOrder(Node node, StringBuilder builder, int indent) {
@@ -186,7 +189,6 @@ public class AVLBaum<T> implements Iterable<T> {
 		builder.append(String.format("%-" + (indent * 7 + 1) + "s", ""));
 		builder.append(node.data);
 		builder.append('\n');
-		builder.append(node.data).append('\n');
 		toStringPreOrder(node.left, builder, indent + 1);
 		toStringPreOrder(node.right, builder, indent + 1);
 		return builder;
@@ -200,11 +202,10 @@ public class AVLBaum<T> implements Iterable<T> {
 		builder.append(String.format("%-" + (indent * 7 + 1) + "s", ""));
 		builder.append(node.data);
 		builder.append('\n');
-		builder.append(node.data).append('\n');
 		return builder;
 	}
 
-	public enum ToStringStrategy {
+	public enum IterationStrategy {
 		IN_ORDER, PRE_ORDER, POST_ORDER
 	}
 
@@ -221,49 +222,128 @@ public class AVLBaum<T> implements Iterable<T> {
 
 	}
 
-	@Override
-	public Iterator<T> iterator() {
-		return new Itr();
+
+	public interface TreeIterator<E> extends Iterator<E> {
+		int height();
 	}
 
-	private class Itr implements Iterator<T> {
+	@Override
+	public TreeIterator<T> iterator() {
+		return iterator(IterationStrategy.IN_ORDER);
+	}
+
+	public TreeIterator<T> iterator(IterationStrategy strategy) {
+		return new Itr(strategy);
+	}
+
+	private class Itr implements TreeIterator<T> {
 
 		private ItrElement cur = null;
-		private ToStringStrategy strategy;
+		private final IterationStrategy strategy;
 
-		private void next(ToStringStrategy strategy) {
-			if (cur == null) {
-				if (root != null) {
-					cur = new ItrElement(root);
-					return;
-				}
-				throw new NoSuchElementException();
-			}
+		public Itr(IterationStrategy strategy) {
+			this.strategy = strategy;
+		}
+
+		private ItrElement successor(ItrElement element) {
 			switch (strategy) {
 				case IN_ORDER:
-					if (cur.stage == 0) {
-						cur.stage = 1;
-						if (cur.node.left != null) {
-							cur = new ItrElement(cur.node.left, cur);
-							break;
-						}
-					}
-					if (cur.stage == 1) {
-						cur.stage = 2;
-						break;
-					}
-					if (cur.stage == 2) {
-						cur.stage = 3;
-						if (cur.node.right != null) {
-							cur = new ItrElement(cur.node.right, cur);break;
-						}
-					}
-					break;
+					return nextInOrder(element);
 				case POST_ORDER:
-					break;
+					return nextPostOrder(element);
 				case PRE_ORDER:
-					break;
+					return nextPreOrder(element);
 			}
+			throw new IllegalStateException();
+		}
+
+		private ItrElement nextInOrder(ItrElement element) {
+			if (element == null) {
+				if (root == null)
+					return null;
+				element = leftmost(new ItrElement(root));
+			} else {
+				if (element.node.right != null) {
+					element = leftmost(new ItrElement(element.node.right, element.parent));
+				} else {
+					element = element.parent;
+				}
+			}
+			return element;
+		}
+
+		private ItrElement nextPreOrder(ItrElement element) {
+			if (element == null) {
+				if (root == null)
+					return null;
+				element = new ItrElement(root);
+			} else {
+				if (element.node.left != null) {
+					ItrElement parent = element.node.right == null
+							? element.parent
+							: new ItrElement(element.node.right, element.parent);
+					element = new ItrElement(element.node.left, parent);
+				} else if (element.node.right != null) {
+					element = new ItrElement(element.node.right, element.parent);
+				} else {
+					element = element.parent;
+				}
+			}
+			return element;
+		}
+
+		private ItrElement nextPostOrder(ItrElement element) {
+			if (element == null) {
+				if (root == null)
+					return null;
+				element = new ItrElement(root);
+				element = postOrderLoop1(element);
+			} else {
+				if (element.parent == null)
+					return null;
+				while (element.parent != null && element.parent.node.right == element.node) {
+					element = element.parent.parent;
+					if (element == null)
+						return null;
+				}
+				if (element.node.right != null) {
+					element = new ItrElement(element.node.right, element);
+					element = postOrderLoop1(element);
+				} else {
+					element = element.parent;
+				}
+			}
+			return element;
+		}
+
+		private ItrElement postOrderLoop1(ItrElement element) {
+			while (true) {
+				if (element.node.left != null) {
+					ItrElement parent = element.node.right == null
+							? element
+							: new ItrElement(element.node.right, element);
+					element = new ItrElement(element.node.left, parent);
+				} else if (element.node.right != null) {
+					element = new ItrElement(element.node.right, element);
+				} else {
+					break;
+				}
+			}
+			return element;
+		}
+
+		private ItrElement leftmost(ItrElement from) {
+			while (from.node.left != null) {
+				from = new ItrElement(from.node.left, from);
+			}
+			return from;
+		}
+
+		@Override
+		public int height() {
+			if (cur == null)
+				throw new NoSuchElementException();
+			return cur.node.height;
 		}
 
 		/**
@@ -275,21 +355,22 @@ public class AVLBaum<T> implements Iterable<T> {
 		 */
 		@Override
 		public boolean hasNext() {
-			if (cur == null) {
-				return root != null;
-			}
-			return false;
+			return successor(cur) != null;
 		}
 
 		/**
 		 * Returns the next element in the iteration.
 		 *
 		 * @return the next element in the iteration
+		 *
 		 * @throws NoSuchElementException if the iteration has no more elements
 		 */
 		@Override
 		public T next() {
-			return null;
+			cur = successor(cur);
+			if (cur == null)
+				throw new NoSuchElementException();
+			return cur.node.data;
 		}
 
 		/**
@@ -304,25 +385,22 @@ public class AVLBaum<T> implements Iterable<T> {
 		 * {@link #forEachRemaining forEachRemaining} method.
 		 *
 		 * @throws UnsupportedOperationException if the {@code remove} operation is not supported by
-		 * this iterator
-		 * @throws IllegalStateException if the {@code next} method has not yet been called, or the
-		 * {@code remove} method has already been called after the last call to the {@code next}
-		 * method
+		 *                                       this iterator
+		 * @throws IllegalStateException         if the {@code next} method has not yet been called,
+		 *                                       or the {@code remove} method has already been
+		 *                                       called after the last call to the {@code next}
+		 *                                       method
 		 * @implSpec The default implementation throws an instance of
 		 * {@link UnsupportedOperationException} and performs no other action.
 		 */
 		@Override
 		public void remove() {
-			Iterator.super.remove();
+			TreeIterator.super.remove();
 		}
 
 		private class ItrElement {
 			private Node node;
 			private ItrElement parent;
-			private int stage = 0;
-
-			public ItrElement() {
-			}
 
 			public ItrElement(Node node) {
 				this.node = node;
