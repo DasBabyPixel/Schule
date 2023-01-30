@@ -10,10 +10,10 @@ import java.util.Random;
 public class Start {
 
 	public static void main(String[] args) {
-		AVLBaum<Integer> baum = new AVLBaum<>(Comparator.comparingInt(o -> o));
+		Tree<Integer> baum = new AVLBaum<>(Comparator.comparingInt(o -> o));
 		Random r = new Random(2);
 		System.out.println(baum.size());
-		for (int i = 0; i < 15; i++) {
+		for (int i = 0; i < 150000; i++) {
 			int j = r.nextInt(10000);
 			j = i;
 			if (!baum.contains(j)) {

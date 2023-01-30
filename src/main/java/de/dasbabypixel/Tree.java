@@ -16,6 +16,12 @@ public interface Tree<E> extends Set<E> {
 
 	String toString(IterationStrategy strategy);
 
+	TreeIterator<E> iterator();
+
+	TreeIterator<E> iterator(IterationStrategy strategy);
+
+	int height();
+
 	class AVLBaum<Entry> implements Tree<Entry> {
 
 		private Node root;
