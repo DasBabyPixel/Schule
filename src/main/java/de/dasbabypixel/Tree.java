@@ -3,9 +3,11 @@ package de.dasbabypixel;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@SuppressWarnings("unused")
 public interface Tree<E> extends Set<E> {
 
 	interface TreeIterator<E> extends Iterator<E> {
+
 		int height();
 
 		int depth();
@@ -14,6 +16,7 @@ public interface Tree<E> extends Set<E> {
 	@Override
 	String toString();
 
+	@SuppressWarnings("unused")
 	String toString(IterationStrategy strategy);
 
 	TreeIterator<E> iterator();
@@ -374,7 +377,7 @@ public interface Tree<E> extends Set<E> {
 				}
 				r[i++] = (T) it.next();
 			}
-			// trim if overallocated
+			// trim if over-allocated
 			return (i == len) ? r : Arrays.copyOf(r, i);
 		}
 

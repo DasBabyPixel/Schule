@@ -1,62 +1,44 @@
 package de.dasbabypixel;
 
-import de.dasbabypixel.Tree.AVLBaum;
-import de.dasbabypixel.Tree.IterationStrategy;
-import de.dasbabypixel.Tree.TreeIterator;
-
-import java.util.Comparator;
-import java.util.Random;
+import java.util.Iterator;
 
 public class Start {
 
 	public static void main(String[] args) {
-		Tree<Integer> baum = new AVLBaum<>(Comparator.comparingInt(o -> o));
-		Random r = new Random(2);
-		System.out.println(baum.size());
-		for (int i = 0; i < 150000; i++) {
-			int j = r.nextInt(10000);
-			j = i;
-			if (!baum.contains(j)) {
-				baum.add(j);
-			} else {
-				i--;
-			}
-		}
 
-		TreeIterator<Integer> it = baum.iterator(IterationStrategy.IN_ORDER);
-		StringBuilder sb = new StringBuilder();
-		while (it.hasNext()) {
-			int i = it.next();
-			sb.append(String.format(" %s%s", repeat(' ', 7 * it.depth()), i));
-			sb.append('\n');
-			System.out.printf(" %s%s%n", repeat(' ', 7 * it.depth()), i);
-		}
-		System.out.println(sb.toString().equals(baum.toString(IterationStrategy.IN_ORDER)));
-		System.out.println(baum.size());
-		it = baum.iterator();
-				while (it.hasNext()) {
-					int i = it.next();
-					if (r.nextDouble() < 0.3) {
-						System.out.println("remove " + i);
-						it.remove();
-					}
-				}
-		System.out.println(baum);
-		System.out.println(baum.height());
-		System.out.println(baum.size());
-	}
+		Graph<String, Integer> graph = Graph.graph();
+		Graph.Node<String, Integer> n1 = graph.newNode("n1");
+		Graph.Node<String, Integer> n2 = graph.newNode("n2");
+		Graph.Node<String, Integer> n3 = graph.newNode("n3");
+		Graph.Node<String, Integer> n4 = graph.newNode("n4");
+		Graph.Node<String, Integer> n5 = graph.newNode("n5");
+		n1.newConnection(n2, 1);
+		n1.newConnection(n3, 4);
+		n1.newConnection(n5, 4);
+		n2.newConnection(n1, 1);
+		n2.newConnection(n4, 1);
+		n4.newConnection(n3, 1);
+		n4.newConnection(n1, 1);
+		n5.newConnection(n4, 4);
 
-	private static String repeat(char n, int times) {
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < times; i++)
-			sb.append(n);
-		return sb.toString();
-	}
+		System.out.println(graph.connections());
 
-	private static BAUM einfuegen(BAUM baum, String... elements) {
-		for (String element : elements) {
-			baum.einfuegen(new NAME(element));
-		}
-		return baum;
+		Iterator<Graph.Node<String, Integer>> it = graph.nodes().iterator();
+		System.out.println(0);
+		it.next();
+		System.out.println(1);
+		it.next();
+		System.out.println(1);
+		it.next();
+		System.out.println(1);
+		it.remove();
+		System.out.println(1);
+
+		System.out.println(graph);
+
+		System.out.println(graph.search(Graph.Algorithm.<String, Integer>dijkstra()
+				.withData(new Graph.Algorithm.DijkstraData<>(n1, n3, c -> c.way().longValue()))));
+
+		System.out.println(graph);
 	}
 }
