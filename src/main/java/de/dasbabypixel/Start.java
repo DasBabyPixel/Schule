@@ -4,7 +4,9 @@ import de.dasbabypixel.Graph.Algorithm;
 import de.dasbabypixel.Graph.Algorithm.DijkstraData;
 import de.dasbabypixel.Graph.Node;
 import de.dasbabypixel.Graph.Path;
+import de.dasbabypixel.Graph.PathWriter;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -19,6 +21,7 @@ public class Start {
 		int nodesCount = 1_000_00;
 		int connectionsCount = 2_000_00;
 		int paths = 100;
+		int reachableCheckCount = 1000;
 
 		long time = System.currentTimeMillis();
 		Random r = new Random();
@@ -46,18 +49,32 @@ public class Start {
 				int id1;
 				int id2;
 				do {
-					id1= random.nextInt(graph.nodes().size());
-					id2= random.nextInt(graph.nodes().size());
-				} while(id1==id2);
+					id1 = random.nextInt(graph.nodes().size());
+					id2 = random.nextInt(graph.nodes().size());
+				} while (id1 == id2);
 				Path<Integer, Integer> path = Algorithm.<Integer, Integer>dijkstra().search(graph,
 						new DijkstraData<>(nodes.get(id1), nodes.get(id2),
 								n -> n.way().longValue()));
 
-				System.out.println(path);
+				try {
+					PathWriter.simple.write(path, System.out);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
 				latch.countDown();
 			});
 		}
 		latch.await();
+		CountDownLatch latch2 = new CountDownLatch(reachableCheckCount);
+		for (int i = 0; i < reachableCheckCount; i++) {
+			service.submit(() -> {
+				Random random = new Random();
+				int id = random.nextInt(graph.nodes().size());
+				System.out.println(nodes.get(id).reachableNodes().size());
+				latch2.countDown();
+			});
+		}
+		latch2.await();
 		System.out.println((System.currentTimeMillis() - time) + "ms");
 	}
 }

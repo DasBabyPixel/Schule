@@ -49,6 +49,8 @@ public interface Graph<NodeDataType, WayDataType>
 
 		void remove();
 
+		Collection<Node<NodeDataType, WayDataType>> reachableNodes();
+
 		interface Connection<NodeDataType, WayDataType> {
 			Node<NodeDataType, WayDataType> from();
 
@@ -75,6 +77,11 @@ public interface Graph<NodeDataType, WayDataType>
 				BufferedWriter bw = writer instanceof BufferedWriter
 						? (BufferedWriter) writer
 						: new BufferedWriter(writer);
+				if (path == null) {
+					bw.write("null\n");
+					bw.flush();
+					return;
+				}
 				boolean first = true;
 				for (Node.Connection<?, ?> connection : path) {
 					if (first) {
@@ -84,6 +91,8 @@ public interface Graph<NodeDataType, WayDataType>
 					bw.append(" > ").append(connection.way().toString()).append(" > ")
 							.append(connection.to().data().toString());
 				}
+				bw.append("]\n");
+				bw.flush();
 			}
 		};
 
@@ -675,6 +684,23 @@ public interface Graph<NodeDataType, WayDataType>
 			@Override
 			public List<Connection<NodeDataType, WayDataType>> connections() {
 				return connectionsUnmodifiable;
+			}
+
+			@Override
+			public Collection<Node<NodeDataType, WayDataType>> reachableNodes() {
+				Set<Node<NodeDataType, WayDataType>> nodes = new HashSet<>();
+				Deque<Node<NodeDataType, WayDataType>> unchecked =
+						new ArrayDeque<>(Collections.singleton(this));
+				Node<NodeDataType, WayDataType> node;
+				while ((node = unchecked.pollFirst()) != null) {
+					if (!nodes.contains(node)) {
+						nodes.add(node);
+						for (Connection<NodeDataType, WayDataType> connection : node.connections()) {
+							unchecked.add(connection.to());
+						}
+					}
+				}
+				return Collections.unmodifiableCollection(nodes);
 			}
 
 			@Override
