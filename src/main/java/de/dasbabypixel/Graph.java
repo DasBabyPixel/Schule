@@ -1,5 +1,7 @@
 package de.dasbabypixel;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @SuppressWarnings("unused")
@@ -61,6 +63,36 @@ public interface Graph<NodeDataType, WayDataType>
 	}
 
 
+	interface PathWriter {
+		PathWriter simple = new PathWriter() {
+			@Override
+			public void write(Path<?, ?> path, OutputStream out) throws IOException {
+				write(path, new OutputStreamWriter(out, StandardCharsets.UTF_8));
+			}
+
+			@Override
+			public void write(Path<?, ?> path, Writer writer) throws IOException {
+				BufferedWriter bw = writer instanceof BufferedWriter
+						? (BufferedWriter) writer
+						: new BufferedWriter(writer);
+				boolean first = true;
+				for (Node.Connection<?, ?> connection : path) {
+					if (first) {
+						first = false;
+						bw.append("Path [").append(connection.from().data().toString());
+					}
+					bw.append(" > ").append(connection.way().toString()).append(" > ")
+							.append(connection.to().data().toString());
+				}
+			}
+		};
+
+		void write(Path<?, ?> path, OutputStream out) throws IOException;
+
+		void write(Path<?, ?> path, Writer writer) throws IOException;
+	}
+
+
 	interface Path<NodeDataType, WayDataType>
 			extends Iterable<Node.Connection<NodeDataType, WayDataType>> {
 
@@ -69,6 +101,15 @@ public interface Graph<NodeDataType, WayDataType>
 		Node<NodeDataType, WayDataType> last();
 
 		Node<NodeDataType, WayDataType> first();
+
+		default void write(PathWriter pathWriter, OutputStream out) throws IOException {
+			pathWriter.write(this, out);
+		}
+
+		default void write(PathWriter pathWriter, Writer writer) throws IOException {
+			pathWriter.write(this, writer);
+		}
+
 	}
 
 
@@ -83,11 +124,9 @@ public interface Graph<NodeDataType, WayDataType>
 					TreeSet<Node> unchecked = new TreeSet<>();
 					unchecked.add(new Node(data.startNode(), 0));
 					Node node;
-					System.out.println("search");
 					HashSet<Graph.Node<NodeDataType, WayDataType>> usedNodes = new HashSet<>();
 					while ((node = unchecked.pollFirst()) != null) {
 						if (node.targetNode.equals(data.targetNode())) {
-							System.out.println("search found");
 							return node.createPath();
 						}
 						for (Graph.Node.Connection<NodeDataType, WayDataType> connection : node.targetNode.connections()) {
@@ -100,7 +139,6 @@ public interface Graph<NodeDataType, WayDataType>
 							unchecked.add(n);
 						}
 					}
-					System.out.println("search done");
 					return null;
 				}
 

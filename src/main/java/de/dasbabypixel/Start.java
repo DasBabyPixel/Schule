@@ -1,44 +1,65 @@
 package de.dasbabypixel;
 
+import de.dasbabypixel.Graph.Algorithm;
+import de.dasbabypixel.Graph.Algorithm.DijkstraData;
+import de.dasbabypixel.Graph.Node;
+import de.dasbabypixel.Graph.Path;
+import sun.nio.cs.IBM437;
+
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Start {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 
-		Graph<String, Integer> graph = Graph.graph();
-		Graph.Node<String, Integer> n1 = graph.newNode("n1");
-		Graph.Node<String, Integer> n2 = graph.newNode("n2");
-		Graph.Node<String, Integer> n3 = graph.newNode("n3");
-		Graph.Node<String, Integer> n4 = graph.newNode("n4");
-		Graph.Node<String, Integer> n5 = graph.newNode("n5");
-		n1.newConnection(n2, 1);
-		n1.newConnection(n3, 4);
-		n1.newConnection(n5, 4);
-		n2.newConnection(n1, 1);
-		n2.newConnection(n4, 1);
-		n4.newConnection(n3, 1);
-		n4.newConnection(n1, 1);
-		n5.newConnection(n4, 4);
+		int nodesCount = 1_000_00;
+		int connectionsCount = 2_000_00;
+		int paths = 100;
 
-		System.out.println(graph.connections());
+		long time = System.currentTimeMillis();
+		Random r = new Random();
 
-		Iterator<Graph.Node<String, Integer>> it = graph.nodes().iterator();
-		System.out.println(0);
-		it.next();
-		System.out.println(1);
-		it.next();
-		System.out.println(1);
-		it.next();
-		System.out.println(1);
-		it.remove();
-		System.out.println(1);
+		Graph<Integer, Integer> graph = Graph.graph();
 
-		System.out.println(graph);
+		Map<Integer, Node<Integer, Integer>> nodes = new HashMap<>();
+		for (int i = 0; i < nodesCount; i++) {
+			nodes.put(i, graph.newNode(i));
+		}
+		for (int i = 0; i < connectionsCount; i++) {
+			int id1 = r.nextInt(graph.nodes().size());
+			int id2 = r.nextInt(graph.nodes().size());
+			if (id1 == id2) {
+				i--;
+				continue;
+			}
+			nodes.get(id1).newConnection(nodes.get(id2), r.nextInt(1000));
+		}
+		ExecutorService service = Executors.newWorkStealingPool();
+		CountDownLatch latch = new CountDownLatch(paths);
+		for (int i = 0; i < paths; i++) {
+			service.submit(() -> {
+				Random random = new Random();
+				int id1;
+				int id2;
+				do {
+					id1= random.nextInt(graph.nodes().size());
+					id2= random.nextInt(graph.nodes().size());
+				} while(id1==id2);
+				Path<Integer, Integer> path = Algorithm.<Integer, Integer>dijkstra().search(graph,
+						new DijkstraData<>(nodes.get(id1), nodes.get(id2),
+								n -> n.way().longValue()));
 
-		System.out.println(graph.search(Graph.Algorithm.<String, Integer>dijkstra()
-				.withData(new Graph.Algorithm.DijkstraData<>(n1, n3, c -> c.way().longValue()))));
-
-		System.out.println(graph);
+				System.out.println(path);
+				latch.countDown();
+			});
+		}
+		latch.await();
+		System.out.println((System.currentTimeMillis() - time) + "ms");
 	}
 }
