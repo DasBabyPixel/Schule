@@ -4,10 +4,8 @@ import de.dasbabypixel.Graph.Algorithm;
 import de.dasbabypixel.Graph.Algorithm.DijkstraData;
 import de.dasbabypixel.Graph.Node;
 import de.dasbabypixel.Graph.Path;
-import sun.nio.cs.IBM437;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
