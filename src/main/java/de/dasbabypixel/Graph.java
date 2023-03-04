@@ -1,5 +1,7 @@
 package de.dasbabypixel;
 
+import de.dasbabypixel.Graph.Node.Connection;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -31,8 +33,12 @@ public interface Graph<NodeDataType, WayDataType>
 		return data.algorithm().search(this, data.data());
 	}
 
-	static <NodeDataType, WayDataType> Graph<NodeDataType, WayDataType> graph() {
-		return new SimpleGraph<>();
+	static <NodeDataType, WayDataType> Graph<NodeDataType, WayDataType> linkedGraph() {
+		return new LinkedGraph<>();
+	}
+
+	static <NodeDataType, WayDataType> Graph<NodeDataType, WayDataType> arrayGraph() {
+		return new ArrayGraph<>();
 	}
 
 	interface Node<NodeDataType, WayDataType> {
@@ -139,10 +145,11 @@ public interface Graph<NodeDataType, WayDataType>
 							return node.createPath();
 						}
 						for (Graph.Node.Connection<NodeDataType, WayDataType> connection : node.targetNode.connections()) {
-							if (usedNodes.contains(connection.to())) {
+							Graph.Node<NodeDataType, WayDataType> to = connection.to();
+							if (usedNodes.contains(to)) {
 								continue;
 							}
-							Node n = new Node(node, connection, connection.to(),
+							Node n = new Node(node, connection, to,
 									node.distance + data.weightCalculator().weight(connection));
 							usedNodes.add(n.targetNode);
 							unchecked.add(n);
@@ -172,8 +179,8 @@ public interface Graph<NodeDataType, WayDataType>
 					}
 
 					private Path<NodeDataType, WayDataType> createPath() {
-						SimpleGraph.SPath<NodeDataType, WayDataType> path =
-								new SimpleGraph.SPath<>(targetNode.graph());
+						Util.SimplePath<NodeDataType, WayDataType> path =
+								new Util.SimplePath<>(targetNode.graph());
 						Node cur = this;
 						do {
 							if (cur.previousConnection == null) {
@@ -273,7 +280,7 @@ public interface Graph<NodeDataType, WayDataType>
 	}
 
 
-	class SimpleGraph<NodeDataType, WayDataType> implements Graph<NodeDataType, WayDataType> {
+	class LinkedGraph<NodeDataType, WayDataType> implements Graph<NodeDataType, WayDataType> {
 
 		private final ArrayList<Node<NodeDataType, WayDataType>> nodes = new ArrayList<>();
 
@@ -289,12 +296,12 @@ public interface Graph<NodeDataType, WayDataType>
 
 						@Override
 						public void remove() {
-							SNode snode = (SNode) node;
-							while (!snode.connections.isEmpty()) {
-								snode.connections.get(0).remove();
+							LinkedNode linkedNode = (LinkedNode) node;
+							while (!linkedNode.connections.isEmpty()) {
+								linkedNode.connections.get(0).remove();
 							}
-							while (!snode.origins.isEmpty()) {
-								snode.origins.get(0).remove();
+							while (!linkedNode.origins.isEmpty()) {
+								linkedNode.origins.get(0).remove();
 							}
 							it.remove();
 						}
@@ -396,7 +403,7 @@ public interface Graph<NodeDataType, WayDataType>
 								throw new IllegalStateException();
 
 							currentIterator.remove();
-							SNode to = (SNode) currentConnection.to();
+							LinkedNode to = (LinkedNode) currentConnection.to();
 							to.origins.remove(currentConnection);
 
 							currentConnection = null;
@@ -564,17 +571,17 @@ public interface Graph<NodeDataType, WayDataType>
 
 		@Override
 		public Node<NodeDataType, WayDataType> newNode(NodeDataType data) {
-			SNode node = new SNode(data);
+			LinkedNode node = new LinkedNode(data);
 			nodes.add(node);
 			return node;
 		}
 
 		@Override
 		public void removeNode(Node<NodeDataType, WayDataType> node) {
-			if (!SNode.class.isInstance(node)) {
+			if (!LinkedNode.class.isInstance(node)) {
 				throw new IllegalArgumentException("Not a valid node");
 			}
-			SNode snode = (SNode) node;
+			LinkedNode snode = (LinkedNode) node;
 			if (!snode.graph().equals(this)) {
 				throw new IllegalArgumentException("Node is not in this graph");
 			}
@@ -599,17 +606,494 @@ public interface Graph<NodeDataType, WayDataType>
 			connection.from().removeConnection(connection);
 		}
 
-		private static final class SPath<NodeDataType, WayDataType>
+		private class LinkedNode implements Node<NodeDataType, WayDataType> {
+			private final NodeDataType data;
+			private final ArrayList<Connection<NodeDataType, WayDataType>> connections;
+			private final List<Connection<NodeDataType, WayDataType>> connectionsUnmodifiable;
+			private final ArrayList<Connection<NodeDataType, WayDataType>> origins;
+
+			public LinkedNode(NodeDataType data) {
+				this.data = data;
+				this.connections = new ArrayList<>();
+				this.connectionsUnmodifiable = Collections.unmodifiableList(connections);
+				this.origins = new ArrayList<>();
+			}
+
+			public LinkedGraph<NodeDataType, WayDataType> graph() {
+				return LinkedGraph.this;
+			}
+
+			@Override
+			public NodeDataType data() {
+				return data;
+			}
+
+			@Override
+			public List<Connection<NodeDataType, WayDataType>> connections() {
+				return connectionsUnmodifiable;
+			}
+
+			@Override
+			public Collection<Node<NodeDataType, WayDataType>> reachableNodes() {
+				Set<Node<NodeDataType, WayDataType>> nodes = new HashSet<>();
+				Deque<Node<NodeDataType, WayDataType>> unchecked =
+						new ArrayDeque<>(Collections.singleton(this));
+				Node<NodeDataType, WayDataType> node;
+				while ((node = unchecked.pollFirst()) != null) {
+					if (!nodes.contains(node)) {
+						nodes.add(node);
+						for (Connection<NodeDataType, WayDataType> connection : node.connections()) {
+							unchecked.add(connection.to());
+						}
+					}
+				}
+				return Collections.unmodifiableCollection(nodes);
+			}
+
+			@Override
+			public Connection<NodeDataType, WayDataType> newConnection(
+					Node<NodeDataType, WayDataType> to, WayDataType way) {
+				if (!to.getClass().equals(LinkedNode.class)) {
+					throw new IllegalArgumentException("Illegal node");
+				}
+				LinkedNode sto = (LinkedNode) to;
+				if (sto.graph() != graph()) {
+					throw new IllegalArgumentException("Illegal node");
+				}
+				LinkedConnection con = new LinkedConnection(this, sto, way);
+				sto.origins.add(con);
+				connections.add(con);
+				return con;
+			}
+
+			@Override
+			public void removeConnection(Connection<NodeDataType, WayDataType> connection) {
+				if (!LinkedConnection.class.isInstance(connection)) {
+					throw new IllegalArgumentException("This node does not have that connection!");
+				}
+				LinkedConnection linkedConnection = (LinkedConnection) connection;
+				if (!connections.contains(linkedConnection)) {
+					throw new IllegalStateException("This node does not have that connection!");
+				}
+				linkedConnection.to.origins.remove(linkedConnection);
+				linkedConnection.from.connections.remove(linkedConnection);
+			}
+
+			@Override
+			public void remove() {
+				removeNode(this);
+			}
+
+			private String ctoString() {
+				Iterator<Node.Connection<NodeDataType, WayDataType>> it = connections.iterator();
+				if (!it.hasNext())
+					return "[]";
+				StringBuilder sb = new StringBuilder();
+				sb.append('[');
+				for (; ; ) {
+					LinkedConnection e = (LinkedConnection) it.next();
+					sb.append(e.nodeToString());
+					if (!it.hasNext())
+						return sb.append(']').toString();
+					sb.append(',').append(' ');
+				}
+			}
+
+			@Override
+			public String toString() {
+				return "Node{data=" + data + ", connections=" + ctoString() + '}';
+			}
+		}
+
+
+		private class LinkedConnection implements Node.Connection<NodeDataType, WayDataType> {
+
+			private final LinkedNode from;
+			private final LinkedNode to;
+			private final WayDataType way;
+
+			public LinkedConnection(LinkedNode from, LinkedNode to, WayDataType way) {
+				this.from = from;
+				this.to = to;
+				this.way = way;
+			}
+
+			@Override
+			public Node<NodeDataType, WayDataType> to() {
+				return to;
+			}
+
+			@Override
+			public WayDataType way() {
+				return way;
+			}
+
+			@Override
+			public Node<NodeDataType, WayDataType> from() {
+				return from;
+			}
+
+			@Override
+			public Graph<NodeDataType, WayDataType> graph() {
+				return LinkedGraph.this;
+			}
+
+			@Override
+			public void remove() {
+				removeConnection(this);
+			}
+
+			public String nodeToString() {
+				return "Connection{to=" + to.data() + ", way=" + way + '}';
+			}
+
+			@Override
+			public String toString() {
+				return "Connection{from=" + from.data() + ", to=" + to.data() + ", way=" + way
+						+ '}';
+			}
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder b = new StringBuilder();
+			b.append("Graph: ");
+			for (Node<NodeDataType, WayDataType> n : nodes) {
+				b.append('\n').append(" - ").append(n);
+			}
+			return b.toString();
+		}
+	}
+
+
+	class ArrayGraph<NodeDataType, WayDataType> implements Graph<NodeDataType, WayDataType> {
+		private final ArrayList<NodeDataType> nodes = new ArrayList<>();
+		private ArrayList<WayDataType>[][] connections;
+		// connections[fromNode][toNode].get(connectionId)
+
+		public ArrayGraph() {
+			//noinspection unchecked
+			this.connections = new ArrayList[1][1];
+		}
+
+		@Override
+		public Collection<Node<NodeDataType, WayDataType>> nodes() {
+			Collection<Node<NodeDataType, WayDataType>> nodes = new HashSet<>();
+			int i = 0;
+			for (int node = 0; node < this.nodes.size(); node++) {
+				nodes.add(new ArrayNode(node));
+			}
+			return Collections.unmodifiableCollection(nodes);
+		}
+
+		@Override
+		public Collection<Connection<NodeDataType, WayDataType>> connections() {
+			List<Connection<NodeDataType, WayDataType>> connections = new ArrayList<>();
+			int max = Math.min(nodes.size(), this.connections.length);
+			for (int fromId = 0; fromId < max; fromId++) {
+				for (int toId = 0; toId < max; toId++) {
+					if (this.connections[fromId][toId] != null) {
+						for (int way = 0; way < this.connections[fromId][toId].size(); way++) {
+							connections.add(
+									new ArrayConnection(new ArrayNode(fromId), new ArrayNode(toId),
+											way, this.connections[fromId][toId].get(way)));
+						}
+					}
+				}
+			}
+			return connections;
+		}
+
+		@Override
+		public Node<NodeDataType, WayDataType> newNode(NodeDataType data) {
+			int index = nodes.size();
+			nodes.add(data);
+			return new ArrayNode(index);
+		}
+
+		@Override
+		public void removeNode(Node<NodeDataType, WayDataType> node) {
+			ArrayNode an = cast(node);
+			int index = an.node();
+			if (index == -1)
+				return;
+			int newSize = nodes.size();
+			if (newSize * 2 < connections.length && newSize != 0) {
+				ArrayList<WayDataType>[][] oldConnections = connections;
+				System.out.println("resizing to " + oldConnections.length / 2);
+				//noinspection unchecked
+				connections = new ArrayList[oldConnections.length / 2][oldConnections.length / 2];
+				for (int fromId = 0, oldFromId = 0;
+						fromId < connections.length; fromId++, oldFromId++) {
+					if (oldFromId == index)
+						oldFromId++;
+					for (int toId = 0, oldToId = 0;
+							toId < connections[fromId].length; toId++, oldToId++) {
+						if (oldToId == index)
+							oldToId++;
+						connections[fromId][toId] = oldConnections[oldFromId][oldToId];
+					}
+				}
+			}
+		}
+
+		@Override
+		public Connection<NodeDataType, WayDataType> newConnection(
+				Node<NodeDataType, WayDataType> from, Node<NodeDataType, WayDataType> to,
+				WayDataType way) {
+			ArrayNode afrom = cast(from);
+			ArrayNode ato = cast(to);
+			int min = Math.max(afrom.node(), ato.node());
+			if (connections.length <= min) {
+				int newLength = connections.length;
+				do {
+					newLength *= 2;
+				} while (newLength <= min);
+				System.out.println("resizing to " + newLength + "x" + newLength);
+				ArrayList<WayDataType>[][] oldConnections = connections;
+				//noinspection unchecked
+				connections = new ArrayList[newLength][newLength];
+				for (int fromId = 0; fromId < oldConnections.length; fromId++) {
+					System.arraycopy(oldConnections[fromId], 0, connections[fromId], 0,
+							oldConnections[fromId].length);
+				}
+			}
+			ArrayList<WayDataType> ways = connections[afrom.node][ato.node];
+			if (ways == null) {
+				ways = new ArrayList<>(1);
+				connections[afrom.node][ato.node] = ways;
+			}
+			int wayId = ways.size();
+			ways.add(wayId, way);
+			return new ArrayConnection(afrom, ato, wayId, way);
+		}
+
+		@Override
+		public void removeConnection(Connection<NodeDataType, WayDataType> connection) {
+			ArrayConnection con = cast(connection);
+			WayDataType way = con.way();
+			if (way == null)
+				return;
+			ArrayList<WayDataType> ways = connections[con.from.node()][con.to.node()];
+			ways.remove(con.wayId);
+			if (ways.isEmpty()) {
+				connections[con.from.node][con.to.node] = null;
+			}
+		}
+
+		private ArrayConnection cast(Connection<NodeDataType, WayDataType> connection) {
+			if (!ArrayConnection.class.isInstance(connection))
+				throw new IllegalArgumentException("Wrong connection");
+			if (connection.graph() != ArrayGraph.this)
+				throw new IllegalStateException("Connection not of this graph");
+			return (ArrayConnection) connection;
+		}
+
+		private ArrayNode cast(Node<NodeDataType, WayDataType> node) {
+			if (!ArrayNode.class.isInstance(node))
+				throw new IllegalArgumentException("Wrong node");
+			if (((ArrayNode) node).graph() != this)
+				throw new IllegalStateException("Node not of this graph");
+			return (ArrayNode) node;
+		}
+
+		private class ArrayNode implements Node<NodeDataType, WayDataType> {
+
+			private int node;
+			private NodeDataType data;
+
+			public ArrayNode(int node) {
+				this.node = node;
+				this.data = nodes.get(node);
+			}
+
+			@Override
+			public boolean equals(Object o) {
+				if (this == o)
+					return true;
+				if (o == null || getClass() != o.getClass())
+					return false;
+				ArrayNode arrayNode = (ArrayNode) o;
+				return node == arrayNode.node && data.equals(arrayNode.data);
+			}
+
+			@Override
+			public int hashCode() {
+				return Objects.hash(node, data);
+			}
+
+			public int node() {
+				if (node == -1)
+					return -1;
+				if (nodes.size() <= node) {
+					data = null;
+					return node = -1;
+				}
+				NodeDataType current = nodes.get(node);
+				if (!current.equals(data)) {
+					node = nodes.indexOf(data);
+					if (node == -1) {
+						data = null; // Node removed
+					}
+				}
+				return node;
+			}
+
+			@Override
+			public List<Connection<NodeDataType, WayDataType>> connections() {
+				List<Connection<NodeDataType, WayDataType>> con = new ArrayList<>();
+				int node = node();
+				if (node == -1) {
+					return Collections.emptyList(); // Node removed
+				}
+				ArrayList<WayDataType>[] con2 = connections[node];
+				for (int toNr = 0; toNr < con2.length; toNr++) {
+					if (con2[toNr] == null)
+						continue;
+					for (int i = 0; i < con2[toNr].size(); i++) {
+						con.add(new ArrayConnection(new ArrayNode(node), new ArrayNode(toNr), i,
+								con2[toNr].get(i)));
+					}
+				}
+				return Collections.unmodifiableList(con);
+			}
+
+			@Override
+			public Connection<NodeDataType, WayDataType> newConnection(
+					Node<NodeDataType, WayDataType> to, WayDataType way) {
+				return graph().newConnection(this, to, way);
+			}
+
+			@Override
+			public void removeConnection(Connection<NodeDataType, WayDataType> connection) {
+				graph().removeConnection(connection);
+			}
+
+			@Override
+			public NodeDataType data() {
+				node();
+				return data;
+			}
+
+			@Override
+			public ArrayGraph<NodeDataType, WayDataType> graph() {
+				return ArrayGraph.this;
+			}
+
+			@Override
+			public void remove() {
+				graph().removeNode(this);
+			}
+
+			@Override
+			public Collection<Node<NodeDataType, WayDataType>> reachableNodes() {
+				Collection<Node<NodeDataType, WayDataType>> reachable = new HashSet<>();
+				Set<Integer> used = new HashSet<>();
+				reachableNodes(reachable, used, this.node());
+				used.clear();
+				return Collections.unmodifiableCollection(reachable);
+			}
+
+			private void reachableNodes(Collection<Node<NodeDataType, WayDataType>> nodes,
+					Set<Integer> used, int currentNode) {
+				used.add(currentNode);
+				nodes.add(new ArrayNode(currentNode));
+				for (int toNr = 0; toNr < connections[currentNode].length; toNr++) {
+					if (used.contains(toNr))
+						continue;
+					ArrayList<WayDataType> ways = connections[currentNode][toNr];
+					if (ways == null)
+						continue;
+					reachableNodes(nodes, used, toNr);
+				}
+			}
+		}
+
+
+		private class ArrayConnection implements Connection<NodeDataType, WayDataType> {
+
+			private final ArrayNode from;
+			private final ArrayNode to;
+			private int wayId;
+			private WayDataType way;
+
+			public ArrayConnection(ArrayNode from, ArrayNode to, int wayId, WayDataType way) {
+				this.from = from;
+				this.to = to;
+				this.wayId = wayId;
+				this.way = way;
+			}
+
+			@Override
+			public boolean equals(Object o) {
+				if (this == o)
+					return true;
+				if (o == null || getClass() != o.getClass())
+					return false;
+				ArrayConnection that = (ArrayConnection) o;
+				return wayId == that.wayId && Objects.equals(from, that.from) && Objects.equals(to,
+						that.to) && Objects.equals(way, that.way);
+			}
+
+			@Override
+			public int hashCode() {
+				return Objects.hash(from, to, wayId, way);
+			}
+
+			@Override
+			public ArrayNode from() {
+				return from;
+			}
+
+			@Override
+			public ArrayNode to() {
+				return to;
+			}
+
+			@Override
+			public ArrayGraph<NodeDataType, WayDataType> graph() {
+				return ArrayGraph.this;
+			}
+
+			@Override
+			public WayDataType way() {
+				if (way == null)
+					return null;
+				ArrayList<WayDataType> cons = connections[from.node()][to.node()];
+				if (cons.size() <= wayId) {
+					wayId = -1;
+					return way = null;
+				}
+				WayDataType current = cons.get(wayId);
+				if (!current.equals(way)) {
+					wayId = cons.indexOf(way);
+					if (wayId == -1) {
+						return way = null;
+					}
+				}
+				return way;
+			}
+
+			@Override
+			public void remove() {
+				graph().removeConnection(this);
+			}
+		}
+	}
+
+
+	class Util {
+		private static final class SimplePath<NodeDataType, WayDataType>
 				implements Path<NodeDataType, WayDataType> {
 			private final ArrayList<Node.Connection<NodeDataType, WayDataType>> connections =
 					new ArrayList<>();
 			private final Graph<NodeDataType, WayDataType> graph;
 
-			public SPath(Graph<NodeDataType, WayDataType> graph) {
+			public SimplePath(Graph<NodeDataType, WayDataType> graph) {
 				this.graph = graph;
 			}
 
-			public SPath(Graph<NodeDataType, WayDataType> graph,
+			public SimplePath(Graph<NodeDataType, WayDataType> graph,
 					Collection<Node.Connection<NodeDataType, WayDataType>> connections) {
 				this(graph);
 				this.connections.addAll(connections);
@@ -621,8 +1105,8 @@ public interface Graph<NodeDataType, WayDataType>
 			}
 
 			@Override
-			public SPath<NodeDataType, WayDataType> clone() {
-				return new SPath<>(graph, new ArrayList<>(connections));
+			public SimplePath<NodeDataType, WayDataType> clone() {
+				return new SimplePath<>(graph, new ArrayList<>(connections));
 			}
 
 			@Override
@@ -656,165 +1140,6 @@ public interface Graph<NodeDataType, WayDataType>
 			public Node<NodeDataType, WayDataType> first() {
 				return connections.isEmpty() ? null : connections.get(0).from();
 			}
-		}
-
-
-		private class SNode implements Node<NodeDataType, WayDataType> {
-			private final NodeDataType data;
-			private final ArrayList<Connection<NodeDataType, WayDataType>> connections;
-			private final List<Connection<NodeDataType, WayDataType>> connectionsUnmodifiable;
-			private final ArrayList<Connection<NodeDataType, WayDataType>> origins;
-
-			public SNode(NodeDataType data) {
-				this.data = data;
-				this.connections = new ArrayList<>();
-				this.connectionsUnmodifiable = Collections.unmodifiableList(connections);
-				this.origins = new ArrayList<>();
-			}
-
-			public SimpleGraph<NodeDataType, WayDataType> graph() {
-				return SimpleGraph.this;
-			}
-
-			@Override
-			public NodeDataType data() {
-				return data;
-			}
-
-			@Override
-			public List<Connection<NodeDataType, WayDataType>> connections() {
-				return connectionsUnmodifiable;
-			}
-
-			@Override
-			public Collection<Node<NodeDataType, WayDataType>> reachableNodes() {
-				Set<Node<NodeDataType, WayDataType>> nodes = new HashSet<>();
-				Deque<Node<NodeDataType, WayDataType>> unchecked =
-						new ArrayDeque<>(Collections.singleton(this));
-				Node<NodeDataType, WayDataType> node;
-				while ((node = unchecked.pollFirst()) != null) {
-					if (!nodes.contains(node)) {
-						nodes.add(node);
-						for (Connection<NodeDataType, WayDataType> connection : node.connections()) {
-							unchecked.add(connection.to());
-						}
-					}
-				}
-				return Collections.unmodifiableCollection(nodes);
-			}
-
-			@Override
-			public Connection<NodeDataType, WayDataType> newConnection(
-					Node<NodeDataType, WayDataType> to, WayDataType way) {
-				if (!to.getClass().equals(SNode.class)) {
-					throw new IllegalArgumentException("Illegal node");
-				}
-				SNode sto = (SNode) to;
-				if (sto.graph() != graph()) {
-					throw new IllegalArgumentException("Illegal node");
-				}
-				SConnection con = new SConnection(this, sto, way);
-				sto.origins.add(con);
-				connections.add(con);
-				return con;
-			}
-
-			@Override
-			public void removeConnection(Connection<NodeDataType, WayDataType> connection) {
-				if (!SConnection.class.isInstance(connection)) {
-					throw new IllegalArgumentException("This node does not have that connection!");
-				}
-				SConnection sConnection = (SConnection) connection;
-				if (!connections.contains(sConnection)) {
-					throw new IllegalStateException("This node does not have that connection!");
-				}
-				sConnection.to.origins.remove(sConnection);
-				sConnection.from.connections.remove(sConnection);
-			}
-
-			@Override
-			public void remove() {
-				removeNode(this);
-			}
-
-			private String ctoString() {
-				Iterator<Node.Connection<NodeDataType, WayDataType>> it = connections.iterator();
-				if (!it.hasNext())
-					return "[]";
-				StringBuilder sb = new StringBuilder();
-				sb.append('[');
-				for (; ; ) {
-					SConnection e = (SConnection) it.next();
-					sb.append(e.nodeToString());
-					if (!it.hasNext())
-						return sb.append(']').toString();
-					sb.append(',').append(' ');
-				}
-			}
-
-			@Override
-			public String toString() {
-				return "Node{data=" + data + ", connections=" + ctoString() + '}';
-			}
-		}
-
-
-		private class SConnection implements Node.Connection<NodeDataType, WayDataType> {
-
-			private final SNode from;
-			private final SNode to;
-			private final WayDataType way;
-
-			public SConnection(SNode from, SNode to, WayDataType way) {
-				this.from = from;
-				this.to = to;
-				this.way = way;
-			}
-
-			@Override
-			public Node<NodeDataType, WayDataType> to() {
-				return to;
-			}
-
-			@Override
-			public WayDataType way() {
-				return way;
-			}
-
-			@Override
-			public Node<NodeDataType, WayDataType> from() {
-				return from;
-			}
-
-			@Override
-			public Graph<NodeDataType, WayDataType> graph() {
-				return SimpleGraph.this;
-			}
-
-			@Override
-			public void remove() {
-				removeConnection(this);
-			}
-
-			public String nodeToString() {
-				return "Connection{to=" + to.data() + ", way=" + way + '}';
-			}
-
-			@Override
-			public String toString() {
-				return "Connection{from=" + from.data() + ", to=" + to.data() + ", way=" + way
-						+ '}';
-			}
-		}
-
-		@Override
-		public String toString() {
-			StringBuilder b = new StringBuilder();
-			b.append("Graph: ");
-			for (Node<NodeDataType, WayDataType> n : nodes) {
-				b.append('\n').append(" - ").append(n);
-			}
-			return b.toString();
 		}
 	}
 }

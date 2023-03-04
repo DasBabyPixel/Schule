@@ -18,15 +18,15 @@ public class Start {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		int nodesCount = 1_000_00;
-		int connectionsCount = 2_000_00;
+		int nodesCount = 1_000_0;
+		int connectionsCount = 2_000_0;
 		int paths = 100;
 		int reachableCheckCount = 1000;
 
 		long time = System.currentTimeMillis();
 		Random r = new Random();
 
-		Graph<Integer, Integer> graph = Graph.graph();
+		Graph<Integer, Integer> graph = Graph.arrayGraph();
 
 		Map<Integer, Node<Integer, Integer>> nodes = new HashMap<>();
 		for (int i = 0; i < nodesCount; i++) {
