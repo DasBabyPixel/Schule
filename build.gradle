@@ -7,17 +7,18 @@ version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-}
-
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(8))
+    maven {
+        name = 'DarkCube'
+        credentials PasswordCredentials
+        url = 'https://nexus.darkcube.eu/repository/darkcube/'
+    }
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    implementation 'de.dasbabypixel.gamelauncher:api:0.0.1-SNAPSHOT'
+    implementation 'de.dasbabypixel.gamelauncher:lwjgl:0.0.1-SNAPSHOT'
 }
 
-test {
-    useJUnitPlatform()
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
 }
