@@ -28,6 +28,41 @@ public interface Graph<NodeDataType, WayDataType>
 
 	void removeConnection(Node.Connection<NodeDataType, WayDataType> connection);
 
+	default void writeAdjacencyMatrix(PrintStream writer) {
+		List<Node<NodeDataType, WayDataType>> nodes = new ArrayList<>(nodes());
+		int[] sizes = new int[nodes.size()];
+		int max = 0;
+		for (int index = 0; index < nodes.size(); index++) {
+			sizes[index] = nodes.get(index).data().toString().length();
+			max = Math.max(max, sizes[index] + 1);
+		}
+		writer.println("Graph (" + nodes.size() + " Nodes):");
+		StringBuilder sb2 = new StringBuilder();
+		sb2.append(String.format("%1$" + max + "s", ""));
+		for (Node<NodeDataType, WayDataType> node : nodes) {
+			sb2.append("  ").append(node.data().toString());
+		}
+		writer.println(sb2);
+		for (int index = 0; index < nodes.size(); index++) {
+			StringBuilder sb = new StringBuilder();
+			Node<NodeDataType, WayDataType> node = nodes.get(index);
+			sb.append(String.format("%1$" + max + "s", node.data().toString())).append("|");
+			String[] data = new String[sizes.length];
+			Arrays.fill(data, "");
+			for (Connection<NodeDataType, WayDataType> connection : node.connections()) {
+				data[nodes.indexOf(connection.to())] = connection.way().toString();
+			}
+			for (int dataIndex = 0; dataIndex < data.length; dataIndex++) {
+				data[dataIndex] = String.format("%1$" + sizes[dataIndex] + "s", data[dataIndex]);
+				sb.append(data[dataIndex]);
+				if (dataIndex != data.length - 1) {
+					sb.append("|");
+				}
+			}
+			writer.println(sb);
+		}
+	}
+
 	default <AlgorithmData, CalculatedData> CalculatedData search(
 			Algorithm.AlgorithmWithData<AlgorithmData, NodeDataType, WayDataType, CalculatedData> data) {
 		return data.algorithm().search(this, data.data());
