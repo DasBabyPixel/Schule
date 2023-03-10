@@ -2,6 +2,8 @@ package de.dasbabypixel;
 
 import de.dasbabypixel.Graph.Node;
 import de.dasbabypixel.Graph.Node.Connection;
+import de.dasbabypixel.api.property.NumberChangeListener;
+import de.dasbabypixel.api.property.NumberInvalidationListener;
 import de.dasbabypixel.api.property.NumberValue;
 import de.dasbabypixel.api.property.Property;
 import gamelauncher.engine.GameLauncher;
@@ -10,6 +12,7 @@ import gamelauncher.engine.gui.ParentableAbstractGui;
 import gamelauncher.engine.gui.guis.TextGui;
 import gamelauncher.engine.gui.launcher.ColorGui;
 import gamelauncher.engine.gui.launcher.LineGui;
+import gamelauncher.engine.gui.launcher.ScrollGui;
 import gamelauncher.engine.plugin.Plugin;
 import gamelauncher.engine.plugin.Plugin.GamePlugin;
 import gamelauncher.engine.render.Framebuffer;
@@ -20,6 +23,11 @@ import gamelauncher.engine.util.keybind.MouseButtonKeybindEntry;
 import gamelauncher.engine.util.keybind.MouseButtonKeybindEntry.Type;
 import gamelauncher.engine.util.text.Component;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -57,35 +65,28 @@ public class LauncherImpl extends Plugin {
 
 		public GUI(GameLauncher launcher, Graph<T, V> graph) throws GameException {
 			super(launcher);
-			//			ScrollGui scrollGui = launcher().guiManager().createGui(ScrollGui.class);
-			//			scrollGui.xProperty().bind(xProperty());
-			//			scrollGui.yProperty().bind(yProperty());
-			//			scrollGui.heightProperty().bind(heightProperty());
-			//			scrollGui.widthProperty().bind(widthProperty());
-			//			container = new GuiContainer(launcher);
-			int x = 0;
-			int y = 0;
 			Map<Node<T, V>, GUINode> guiMap = new HashMap<>();
+			ParentableAbstractGui agui = new ParentableAbstractGui(launcher) {
+			};
+			agui.size(2000, 2000);
+			ScrollGui sgui = launcher.guiManager().createGui(ScrollGui.class);
+			sgui.gui().setValue(agui);
+			sgui.xProperty().bind(xProperty());
+			sgui.yProperty().bind(yProperty());
+			sgui.widthProperty().bind(widthProperty());
+			sgui.heightProperty().bind(heightProperty());
 			for (Node<T, V> node : graph.nodes()) {
-				GUINode guiNode = new GUINode(launcher, node, xProperty().add(x * 255),
-						yProperty().add(y * 55));
+				GUINode guiNode = new GUINode(launcher, node, agui.xProperty(), agui.yProperty());
 				guiNode.height(50);
 				guiNode.width(250);
-				if (guiNode.x() + guiNode.width() < guiNode.y() + guiNode.height()) {
-					x++;
-				} else {
-					y++;
-					x = 0;
-				}
-				GUIs.add(guiNode);
+				agui.GUIs.add(guiNode);
 				guiMap.put(node, guiNode);
 			}
 			for (Connection<T, V> connection : graph.connections()) {
-				GUIs.add(new GUIConnection(launcher(), guiMap.get(connection.from()),
+				agui.GUIs.add(new GUIConnection(launcher(), guiMap.get(connection.from()),
 						guiMap.get(connection.to()), connection));
 			}
-			//			scrollGui.gui().setValue(container);
-			//			GUIs.add(scrollGui);
+			GUIs.add(sgui);
 		}
 
 		public class GUIConnection extends ParentableAbstractGui {
@@ -110,10 +111,34 @@ public class LauncherImpl extends Plugin {
 		public class GUINode extends ParentableAbstractGui {
 			private final NumberValue offsetX = NumberValue.zero();
 			private final NumberValue offsetY = NumberValue.zero();
+			private final Path path;
 
 			public GUINode(GameLauncher launcher, Node<T, V> node, NumberValue bindX,
 					NumberValue bindY) throws GameException {
 				super(launcher);
+				this.path = launcher().dataDirectory().resolve(node.data().toString() + ".bin");
+				if (Files.exists(path)) {
+					try {
+						ByteBuffer buf = ByteBuffer.wrap(Files.readAllBytes(path));
+						offsetX.setNumber(buf.getFloat());
+						offsetY.setNumber(buf.getFloat());
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				}
+				NumberInvalidationListener listener = numberValue -> {
+					ByteBuffer buf = ByteBuffer.wrap(new byte[8]);
+					buf.putFloat(offsetX.floatValue());
+					buf.putFloat(offsetY.floatValue());
+					try {
+						Files.write(path, buf.array(), StandardOpenOption.CREATE,
+								StandardOpenOption.TRUNCATE_EXISTING);
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				};
+				offsetX.addListener(listener);
+				offsetY.addListener(listener);
 				xProperty().bind(bindX.add(offsetX));
 				yProperty().bind(bindY.add(offsetY));
 				ColorGui colorGui = launcher().guiManager().createGui(ColorGui.class);
@@ -147,19 +172,17 @@ public class LauncherImpl extends Plugin {
 			private float pressInitialMouseY = 0;
 			private float pressInitialX = 0;
 			private float pressInitialY = 0;
-			private float pressDeltaX = 0;
-			private float pressDeltaY = 0;
 
 			@Override
 			protected boolean doHandle(KeybindEntry entry) throws GameException {
 				if (entry instanceof MouseButtonKeybindEntry mbe) {
+					float pressDeltaX;
+					float pressDeltaY;
 					if (mbe.type() == Type.PRESS) {
 						pressInitialMouseX = mbe.mouseX();
 						pressInitialMouseY = mbe.mouseY();
 						pressInitialX = offsetX.floatValue();
 						pressInitialY = offsetY.floatValue();
-						pressDeltaX = 0;
-						pressDeltaY = 0;
 					} else if (mbe.type() == Type.HOLD) {
 						pressDeltaX = pressInitialMouseX - mbe.mouseX();
 						pressDeltaY = pressInitialMouseY - mbe.mouseY();

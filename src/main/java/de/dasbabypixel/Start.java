@@ -42,6 +42,7 @@ public class Start {
 		Node<String, Integer> nuernberg = graph.newNode("Nürnberg");
 		Node<String, Integer> stuttgart = graph.newNode("Stuttgart");
 		Node<String, Integer> wuerzburg = graph.newNode("Würzburg");
+		Node<String, Integer> ulm = graph.newNode("Ulm");
 
 		connection(berlin, hannover, 260);
 		connection(berlin, hamburg, 280);
@@ -62,6 +63,10 @@ public class Start {
 		connection(muenchen, nuernberg, 160);
 		connection(muenchen, stuttgart, 210);
 		connection(nuernberg, wuerzburg, 110);
+		connection(ulm, muenchen, 180);
+		connection(muenchen, ulm, 180);
+		connection(ulm, stuttgart, 100);
+		connection(nuernberg, ulm, 190);
 
 		LWJGLGameLauncher launcher = new LWJGLGameLauncher();
 		launcher.pluginManager().loadPlugin(
