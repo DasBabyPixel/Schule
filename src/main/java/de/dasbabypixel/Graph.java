@@ -174,19 +174,26 @@ public interface Graph<NodeDataType, WayDataType>
 					TreeSet<Node> unchecked = new TreeSet<>();
 					unchecked.add(new Node(data.startNode(), 0));
 					Node node;
-					HashSet<Graph.Node<NodeDataType, WayDataType>> usedNodes = new HashSet<>();
+					HashMap<Graph.Node<NodeDataType, WayDataType>, Node> usedNodes =
+							new HashMap<>();
 					while ((node = unchecked.pollFirst()) != null) {
 						if (node.targetNode.equals(data.targetNode())) {
 							return node.createPath();
 						}
 						for (Graph.Node.Connection<NodeDataType, WayDataType> connection : node.targetNode.connections()) {
 							Graph.Node<NodeDataType, WayDataType> to = connection.to();
-							if (usedNodes.contains(to)) {
-								continue;
-							}
 							Node n = new Node(node, connection, to,
 									node.distance + data.weightCalculator().weight(connection));
-							usedNodes.add(n.targetNode);
+							if (usedNodes.containsKey(to)) {
+								Node oldNode = usedNodes.get(to);
+								if (oldNode.distance > n.distance) {
+									unchecked.remove(oldNode);
+									unchecked.add(n);
+									usedNodes.put(to, n);
+								}
+								continue;
+							}
+							usedNodes.put(n.targetNode, n);
 							unchecked.add(n);
 						}
 					}
@@ -260,7 +267,6 @@ public interface Graph<NodeDataType, WayDataType>
 				AlgorithmData data) {
 			return new AlgorithmWithData<>(this, data);
 		}
-
 
 		class DijkstraData<NodeDataType, WayDataType> {
 			private final Node<NodeDataType, WayDataType> startNode;

@@ -2,7 +2,9 @@ package de.dasbabypixel;
 
 import de.dasbabypixel.Graph.Algorithm;
 import de.dasbabypixel.Graph.Algorithm.DijkstraData;
+import de.dasbabypixel.Graph.Algorithm.DijkstraData.WeightCalculator;
 import de.dasbabypixel.Graph.Node;
+import de.dasbabypixel.Graph.Node.Connection;
 import de.dasbabypixel.Graph.Path;
 import de.dasbabypixel.Graph.PathWriter;
 import gamelauncher.engine.util.GameException;
@@ -68,6 +70,11 @@ public class Start {
 		connection(ulm, stuttgart, 100);
 		connection(nuernberg, ulm, 190);
 
+		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
+				.withData(new DijkstraData<>(muenchen, kassel, Connection::way))));
+
+		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
+				.withData(new DijkstraData<>(berlin, frankfurt, Connection::way))));
 		LWJGLGameLauncher launcher = new LWJGLGameLauncher();
 		launcher.pluginManager().loadPlugin(
 				Paths.get(Start.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
