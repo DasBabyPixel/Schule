@@ -166,7 +166,7 @@ public interface Graph<NodeDataType, WayDataType>
 	interface Algorithm<AlgorithmData, NodeDataType, WayDataType, CalculatedData> {
 
 		static <NodeDataType, WayDataType> Algorithm<DijkstraData<NodeDataType, WayDataType>, NodeDataType, WayDataType, Path<NodeDataType, WayDataType>> dijkstra() {
-			return new Algorithm<DijkstraData<NodeDataType, WayDataType>, NodeDataType, WayDataType, Path<NodeDataType, WayDataType>>() {
+			return new Algorithm<>() {
 				@Override
 				public Path<NodeDataType, WayDataType> search(
 						Graph<NodeDataType, WayDataType> graph,
@@ -261,6 +261,7 @@ public interface Graph<NodeDataType, WayDataType>
 			return new AlgorithmWithData<>(this, data);
 		}
 
+
 		class DijkstraData<NodeDataType, WayDataType> {
 			private final Node<NodeDataType, WayDataType> startNode;
 			private final Node<NodeDataType, WayDataType> targetNode;
@@ -321,10 +322,10 @@ public interface Graph<NodeDataType, WayDataType>
 
 		@Override
 		public Collection<Node<NodeDataType, WayDataType>> nodes() {
-			return new AbstractCollection<Node<NodeDataType, WayDataType>>() {
+			return new AbstractCollection<>() {
 				@Override
 				public Iterator<Node<NodeDataType, WayDataType>> iterator() {
-					return new Iterator<Node<NodeDataType, WayDataType>>() {
+					return new Iterator<>() {
 						private final Iterator<Node<NodeDataType, WayDataType>> it =
 								nodes.iterator();
 						private Node<NodeDataType, WayDataType> node;
@@ -379,7 +380,7 @@ public interface Graph<NodeDataType, WayDataType>
 
 		@Override
 		public Collection<Node.Connection<NodeDataType, WayDataType>> connections() {
-			return new Collection<Node.Connection<NodeDataType, WayDataType>>() {
+			return new Collection<>() {
 				@Override
 				public int size() {
 					int size = 0;
@@ -426,7 +427,7 @@ public interface Graph<NodeDataType, WayDataType>
 
 				@Override
 				public Iterator<Node.Connection<NodeDataType, WayDataType>> iterator() {
-					return new Iterator<Node.Connection<NodeDataType, WayDataType>>() {
+					return new Iterator<>() {
 						private Iterator<Node<NodeDataType, WayDataType>> nodeIterator;
 						private Iterator<Node.Connection<NodeDataType, WayDataType>>
 								currentIterator;
@@ -489,7 +490,6 @@ public interface Graph<NodeDataType, WayDataType>
 					return a;
 				}
 
-				@SuppressWarnings("unchecked")
 				public <T> T[] toArray(T[] a) {
 					// Estimate size of array; be prepared to see more or fewer elements
 					int size = size();
@@ -519,7 +519,6 @@ public interface Graph<NodeDataType, WayDataType>
 					return it.hasNext() ? finishToArray(r, it) : r;
 				}
 
-				@SuppressWarnings("unchecked")
 				private <T> T[] finishToArray(T[] r, Iterator<?> it) {
 					int len = r.length;
 					int i = len;
@@ -807,7 +806,6 @@ public interface Graph<NodeDataType, WayDataType>
 		// connections[fromNode][toNode].get(connectionId)
 
 		public ArrayGraph() {
-			//noinspection unchecked
 			this.connections = new ArrayList[1][1];
 		}
 
@@ -856,7 +854,6 @@ public interface Graph<NodeDataType, WayDataType>
 			if (newSize * 2 < connections.length && newSize != 0) {
 				ArrayList<WayDataType>[][] oldConnections = connections;
 				System.out.println("resizing to " + oldConnections.length / 2);
-				//noinspection unchecked
 				connections = new ArrayList[oldConnections.length / 2][oldConnections.length / 2];
 				for (int fromId = 0, oldFromId = 0;
 						fromId < connections.length; fromId++, oldFromId++) {
@@ -886,7 +883,6 @@ public interface Graph<NodeDataType, WayDataType>
 				} while (newLength <= min);
 				System.out.println("resizing to " + newLength + "x" + newLength);
 				ArrayList<WayDataType>[][] oldConnections = connections;
-				//noinspection unchecked
 				connections = new ArrayList[newLength][newLength];
 				for (int fromId = 0; fromId < oldConnections.length; fromId++) {
 					System.arraycopy(oldConnections[fromId], 0, connections[fromId], 0,

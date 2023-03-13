@@ -22,6 +22,7 @@ import gamelauncher.engine.util.keybind.KeybindEntry;
 import gamelauncher.engine.util.keybind.MouseButtonKeybindEntry;
 import gamelauncher.engine.util.keybind.MouseButtonKeybindEntry.Type;
 import gamelauncher.engine.util.text.Component;
+import org.joml.Vector2f;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -99,8 +100,20 @@ public class LauncherImpl extends Plugin {
 				widthProperty().bind(GUI.this.widthProperty());
 				heightProperty().bind(GUI.this.heightProperty());
 				LineGui lineGui = launcher.guiManager().createGui(LineGui.class);
-				lineGui.fromX().bind(from.xProperty().add(from.widthProperty().divide(2)));
-				lineGui.fromY().bind(from.yProperty().add(from.heightProperty().divide(2)));
+				lineGui.fromX().bind(from.xProperty().add(from.widthProperty().divide(2))
+						.mapToNumber(n -> {
+							Vector2f vec =
+									new Vector2f(to.x() - from.x(), to.y() - from.y()).normalize()
+											.mul(25);
+							return n.floatValue() + vec.x;
+						}));
+				lineGui.fromY().bind(from.yProperty().add(from.heightProperty().divide(2))
+						.mapToNumber(n -> {
+							Vector2f vec =
+									new Vector2f(to.x() - from.x(), to.y() - from.y()).normalize()
+											.mul(25);
+							return n.floatValue() + vec.y;
+						}));
 				lineGui.toX().bind(to.xProperty().add(to.widthProperty().divide(2)));
 				lineGui.toY().bind(to.yProperty().add(to.heightProperty().divide(2)));
 				GUIs.add(lineGui);
