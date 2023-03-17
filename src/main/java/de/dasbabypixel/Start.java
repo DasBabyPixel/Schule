@@ -45,7 +45,11 @@ public class Start {
 		Node<String, Integer> stuttgart = graph.newNode("Stuttgart");
 		Node<String, Integer> wuerzburg = graph.newNode("Würzburg");
 		Node<String, Integer> ulm = graph.newNode("Ulm");
+		Node<String, Integer> muenster = graph.newNode("Münster");
 
+		connection(muenster, hannover, 200);
+		connection(muenster, koeln, 220);
+		connection(muenster, kassel, 170);
 		connection(berlin, hannover, 260);
 		connection(berlin, hamburg, 280);
 		connection(berlin, leipzig, 180);
@@ -75,6 +79,10 @@ public class Start {
 
 		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
 				.withData(new DijkstraData<>(berlin, frankfurt, Connection::way))));
+
+		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
+				.withData(new DijkstraData<>(hamburg, wuerzburg, Connection::way))));
+		System.out.println(hamburg.reachableNodes());
 		LWJGLGameLauncher launcher = new LWJGLGameLauncher();
 		launcher.pluginManager().loadPlugin(
 				Paths.get(Start.class.getProtectionDomain().getCodeSource().getLocation().toURI()));

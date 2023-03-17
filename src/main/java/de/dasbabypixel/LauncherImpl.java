@@ -100,23 +100,19 @@ public class LauncherImpl extends Plugin {
 				widthProperty().bind(GUI.this.widthProperty());
 				heightProperty().bind(GUI.this.heightProperty());
 				LineGui lineGui = launcher.guiManager().createGui(LineGui.class);
-				lineGui.fromX().bind(from.xProperty().add(from.widthProperty().divide(2))
-						.mapToNumber(n -> {
-							Vector2f vec =
-									new Vector2f(to.x() - from.x(), to.y() - from.y()).normalize()
-											.mul(25);
-							return n.floatValue() + vec.x;
-						}));
-				lineGui.fromY().bind(from.yProperty().add(from.heightProperty().divide(2))
-						.mapToNumber(n -> {
-							Vector2f vec =
-									new Vector2f(to.x() - from.x(), to.y() - from.y()).normalize()
-											.mul(25);
-							return n.floatValue() + vec.y;
-						}));
+				lineGui.fromX().bind(from.xProperty().add(from.widthProperty().divide(2)));
+				lineGui.fromY().bind(from.yProperty().add(from.heightProperty().divide(2)));
 				lineGui.toX().bind(to.xProperty().add(to.widthProperty().divide(2)));
 				lineGui.toY().bind(to.yProperty().add(to.heightProperty().divide(2)));
 				GUIs.add(lineGui);
+				TextGui tgui =
+						new TextGui(launcher, Component.text(connection.way().toString()), 15);
+				tgui.color().set(1, 1, 0, 1);
+				tgui.xProperty().bind(lineGui.toX().add(lineGui.fromX()).divide(2)
+						.subtract(tgui.widthProperty().divide(2)));
+				tgui.yProperty().bind(lineGui.toY().add(lineGui.fromY()).divide(2)
+						.subtract(tgui.heightProperty().divide(2)));
+				GUIs.add(tgui);
 			}
 		}
 
