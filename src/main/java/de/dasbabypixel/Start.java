@@ -74,15 +74,16 @@ public class Start {
 		connection(ulm, stuttgart, 100);
 		connection(nuernberg, ulm, 190);
 
-		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
-				.withData(new DijkstraData<>(muenchen, kassel, Connection::way))));
-
-		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
-				.withData(new DijkstraData<>(berlin, frankfurt, Connection::way))));
-
-		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
-				.withData(new DijkstraData<>(hamburg, wuerzburg, Connection::way))));
-		System.out.println(hamburg.reachableNodes());
+//		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
+//				.withData(new DijkstraData<>(muenchen, kassel, Connection::way))));
+//
+//		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
+//				.withData(new DijkstraData<>(berlin, frankfurt, Connection::way))));
+//
+//		System.out.println(graph.search(Algorithm.<String, Integer>dijkstra()
+//				.withData(new DijkstraData<>(hamburg, wuerzburg, Connection::way))));
+//		System.out.println(hamburg.reachableNodes());
+		graph.writeAdjacencyMatrix(System.out);
 		LWJGLGameLauncher launcher = new LWJGLGameLauncher();
 		launcher.pluginManager().loadPlugin(
 				Paths.get(Start.class.getProtectionDomain().getCodeSource().getLocation().toURI()));

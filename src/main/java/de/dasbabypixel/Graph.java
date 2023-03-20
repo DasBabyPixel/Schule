@@ -38,29 +38,55 @@ public interface Graph<NodeDataType, WayDataType>
 		}
 		writer.println("Graph (" + nodes.size() + " Nodes):");
 		StringBuilder sb2 = new StringBuilder();
-		sb2.append(String.format("%1$" + max + "s", ""));
+		sb2.append(String.format("%1$-" + max + "s", ""));
 		for (Node<NodeDataType, WayDataType> node : nodes) {
-			sb2.append("  ").append(node.data().toString());
+			sb2.append(" ").append(node.data().toString());
 		}
 		writer.println(sb2);
+		writer.printf("%1$" + max + "s", "");
+		writer.print(" ");
+		for (int index = 0; index < nodes.size(); index++) {
+			writer.print(String.format("%1$" + sizes[index] + "s", "").replace(' ', '_') + (
+					index == nodes.size() - 1 ? " " : "_"));
+		}
+		writer.println();
 		for (int index = 0; index < nodes.size(); index++) {
 			StringBuilder sb = new StringBuilder();
 			Node<NodeDataType, WayDataType> node = nodes.get(index);
-			sb.append(String.format("%1$" + max + "s", node.data().toString())).append("|");
+			sb.append(String.format("%1$-" + max + "s", node.data().toString()));
+			if (index == 0)
+				sb.append("/");
+			else if (index == nodes.size() - 1)
+				sb.append("\\");
+			else
+				sb.append("|");
 			String[] data = new String[sizes.length];
 			Arrays.fill(data, "");
 			for (Connection<NodeDataType, WayDataType> connection : node.connections()) {
 				data[nodes.indexOf(connection.to())] = connection.way().toString();
 			}
 			for (int dataIndex = 0; dataIndex < data.length; dataIndex++) {
-				data[dataIndex] = String.format("%1$" + sizes[dataIndex] + "s", data[dataIndex]);
+				data[dataIndex] = String.format("%1$-" + sizes[dataIndex] + "s", data[dataIndex]);
 				sb.append(data[dataIndex]);
-				if (dataIndex != data.length - 1) {
+				if (dataIndex == data.length - 1)
+					if (index == 0)
+						sb.append("\\");
+					else if (index == nodes.size() - 1)
+						sb.append("/");
+					else
+						sb.append("|");
+				else
 					sb.append("|");
-				}
 			}
 			writer.println(sb);
 		}
+		writer.printf("%1$" + max + "s", "");
+		writer.print(" ");
+		for (int index = 0; index < nodes.size(); index++) {
+			writer.print(String.format("%1$" + sizes[index] + "s", "").replace(' ', '‾') + (
+					index == nodes.size() - 1 ? " " : "‾"));
+		}
+		writer.println();
 	}
 
 	default <AlgorithmData, CalculatedData> CalculatedData search(
