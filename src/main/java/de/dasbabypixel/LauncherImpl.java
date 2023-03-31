@@ -66,6 +66,7 @@ public class LauncherImpl extends Plugin {
 
 		public GUI(GameLauncher launcher, Graph<T, V> graph) throws GameException {
 			super(launcher);
+			// Daniel stinkt
 			Map<Node<T, V>, GUINode> guiMap = new HashMap<>();
 			ParentableAbstractGui agui = new ParentableAbstractGui(launcher) {
 			};
